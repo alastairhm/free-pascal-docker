@@ -1,0 +1,182 @@
+stages:
+  - build
+
+
+# Setup DockerHub registry
+.dockerhub_setup:
+  script:
+    # authenticate at DockerHub
+    - echo "$CI_DOCKERHUB_REGISTRY_PASSWORD" | docker login -u "$CI_DOCKERHUB_REGISTRY_USER" --password-stdin $CI_DOCKERHUB_REGISTRY
+    - export REGISTRY_IMAGE_NAME=$CI_DOCKERHUB_REGISTRY_IMAGE
+  # this doesn't work, see https://gitlab.com/gitlab-org/gitlab/-/issues/16343
+  #variables:
+    # The CI registry link which includes the full repository name.
+    #REGISTRY_IMAGE_NAME: $CI_DOCKERHUB_REGISTRY_IMAGE
+
+# Setup GitLab registry
+.gitlab_setup:
+  script:
+    # authenticate at GitLab
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - export REGISTRY_IMAGE_NAME=$CI_REGISTRY_IMAGE/fpc
+  #variables:
+    # The CI registry link which includes the full repository name.
+    #REGISTRY_IMAGE_NAME: $CI_REGISTRY_IMAGE/fpc
+
+# Show debug information and setup Docker
+.setup:
+  script:
+    # output version of docker client and server
+    - docker version
+    # script to register binfmt_misc entries and the static qemu binary files
+    - docker run --rm --privileged multiarch/qemu-user-static --reset --persistent yes
+    # list available platforms (useful for debugging)
+    - echo "The following platforms are available and can be built:"
+    - docker buildx ls
+    # create the appropriate multiple platform driver
+    - docker buildx create --use
+
+# Sanity check of variables and build command
+.build_image:
+  script:
+    # verify that all needed variables are set
+    - if [[ -z "$DOCKERFILE_LOCATION" ]]; then echo "DOCKERFILE_LOCATION is blank"; exit 1; fi
+    - if [[ -z "$REGISTRY_IMAGE_NAME" ]]; then echo "REGISTRY_IMAGE_NAME is blank"; exit 1; fi
+    - if [[ -z "$BUILD_PLATFORMS" ]]; then echo "BUILD_PLATFORMS is blank"; exit 1; fi
+    - if [[ -z "$TARGET_STAGE_NAME" ]]; then echo "TARGET_STAGE_NAME is blank"; exit 1; fi
+    - if [[ -z "$IMAGE_TAG_NAME_SUFFIX" ]]; then echo "IMAGE_TAG_NAME_SUFFIX is blank"; exit 1; fi
+    # build image
+    - |
+      if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
+        # this branch is the default branch and is used to create new development images continuously
+        tag="nightly"
+        echo "Running on default branch '$CI_DEFAULT_BRANCH' to build '$tag' images with the version defined in the Dockerfile"
+        docker buildx build --file="$DOCKERFILE_LOCATION" --platform="$BUILD_PLATFORMS" --target $TARGET_STAGE_NAME --tag="$REGISTRY_IMAGE_NAME:${tag}-$IMAGE_TAG_NAME_SUFFIX" --pull --push .
+      elif [[ "$CI_COMMIT_BRANCH" =~ ^[0-9].[0-9].[0-9]$ ]]; then
+        # branch where the branch name follows semantic versioning
+        version="$CI_COMMIT_BRANCH"
+        echo "Running on branch '$CI_COMMIT_BRANCH' to build images for FPC $version"
+        docker buildx build --file="$DOCKERFILE_LOCATION" --platform="$BUILD_PLATFORMS" --target $TARGET_STAGE_NAME --tag="$REGISTRY_IMAGE_NAME:${version}-$IMAGE_TAG_NAME_SUFFIX" --tag="$REGISTRY_IMAGE_NAME:latest-$IMAGE_TAG_NAME_SUFFIX" --pull --push .
+      else
+        echo "The script can be executed only in the main branch or in a branch that follows semantic versioning but not with '$CI_COMMIT_BRANCH'."
+        exit 1
+      fi
+
+
+
+# Template for Alpine Linux builds
+.alpine_linux_template: &alpine_linux_job_configuration
+  image: jdrouet/docker-with-buildx:latest
+  stage: build
+  services:
+    - name: docker:dind
+      command: ["--experimental"]
+  variables: &alpine_linux_job_variables
+    # The relative path to the Dockerfile to use.
+    DOCKERFILE_LOCATION: "AlpineLinux/Dockerfile"
+    # The platform(s) for which the Dockerfile will be used to create multi-platform images.
+    BUILD_PLATFORMS: "linux/amd64,linux/arm64/v8,linux/arm/v7,linux/386"
+  rules:
+    # Execute this job only if this Dockerfile exists
+    - if: $CI_COMMIT_BRANCH
+      exists:
+        - AlpineLinux/Dockerfile
+  before_script:
+    - !reference [.setup, script]
+
+# Template for Ubuntu builds
+.ubuntu_template: &ubuntu_job_configuration
+  image: jdrouet/docker-with-buildx:latest
+  stage: build
+  services:
+    - name: docker:dind
+      command: ["--experimental"]
+  variables: &ubuntu_job_variables
+    # The relative path to the Dockerfile to use.
+    DOCKERFILE_LOCATION: "Ubuntu/Dockerfile"
+    # The platform(s) for which the Dockerfile will be used to create multi-platform images.
+    #BUILD_PLATFORMS: "linux/amd64,linux/arm64/v8,linux/arm/v7"
+    BUILD_PLATFORMS: "linux/amd64"
+  rules:
+    # Execute this job only if this Dockerfile exists
+    - if: $CI_COMMIT_BRANCH
+      exists:
+        - Ubuntu/Dockerfile
+  before_script:
+    - !reference [.setup, script]
+
+
+
+### Alpine Linux jobs ###
+Full Alpine Linux FPC Image:
+  <<: *alpine_linux_job_configuration
+  script:
+    # generate image and publish at DockerHub
+    - !reference [.dockerhub_setup, script]
+    - !reference [.build_image, script]
+  after_script:
+    # mirror cached image to GitLab
+    - !reference [.gitlab_setup, script]
+    - !reference [.build_image, script]
+  variables:
+    <<: *alpine_linux_job_variables
+    # The name of the stage from the Dockerfile for which an image is to be created.
+    TARGET_STAGE_NAME: "fpc-full"
+    # The suffix name of the tag used to publish the image.
+    IMAGE_TAG_NAME_SUFFIX: "full"
+
+Slim Alpine Linux FPC Image:
+  <<: *alpine_linux_job_configuration
+  script:
+    # generate image and publish at DockerHub
+    - !reference [.dockerhub_setup, script]
+    - !reference [.build_image, script]
+  after_script:
+    # mirror cached image to GitLab
+    - !reference [.gitlab_setup, script]
+    - !reference [.build_image, script]
+  variables:
+    <<: *alpine_linux_job_variables
+    # The name of the stage from the Dockerfile for which an image is to be created.
+    TARGET_STAGE_NAME: "fpc-slim"
+    # The name of the tag used to publish the image.
+    IMAGE_TAG_NAME_SUFFIX: "slim"
+
+Minimal Alpine Linux FPC Image:
+  <<: *alpine_linux_job_configuration
+  script:
+    # generate image and publish at DockerHub
+    - !reference [.dockerhub_setup, script]
+    - !reference [.build_image, script]
+  after_script:
+    # mirror cached image to GitLab
+    - !reference [.gitlab_setup, script]
+    - !reference [.build_image, script]
+  variables:
+    <<: *alpine_linux_job_variables
+    # The name of the stage from the Dockerfile for which an image is to be created.
+    TARGET_STAGE_NAME: "fpc-minimal"
+    # The name of the tag used to publish the image.
+    IMAGE_TAG_NAME_SUFFIX: "minimal"
+
+
+
+### Ubuntu job ###
+Full Ubuntu FPC Image:
+  <<: *ubuntu_job_configuration
+  script:
+    # generate image and publish at DockerHub
+    - !reference [.dockerhub_setup, script]
+    - !reference [.build_image, script]
+  after_script:
+    # mirror cached image to GitLab
+    - !reference [.gitlab_setup, script]
+    - !reference [.build_image, script]
+  variables:
+    <<: *ubuntu_job_variables
+    # The name of the stage from the Dockerfile for which an image is to be created.
+    TARGET_STAGE_NAME: "fpc-full"
+    # The version of Ubuntu defined in the Dockerfile.
+    UBUNTU_VERSION: "focal"
+    # The name of the tag used to publish the image.
+    IMAGE_TAG_NAME_SUFFIX: "$UBUNTU_VERSION-full"
