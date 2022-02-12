@@ -11,10 +11,10 @@ ARG DO_FULL_INSTALLATION=0
 
 
 FROM alpine:$ALPINE_VERSION as gcc
+# override default shell option
+SHELL ["/bin/sh", "-eo", "pipefail", "-c"]
 # update system and install gcc
-RUN apk update \
-    && apk upgrade \
-    && apk add gcc \
+RUN apk --no-cache add gcc \
     # get path and copy gcc library
     && gcc -print-libgcc-file-name > /tmp/lib.path \
     && cat /tmp/lib.path | xargs cp -t /tmp
@@ -61,10 +61,10 @@ WORKDIR /tmp
 # copy gcc binary and libgcc library information
 COPY --from=gcc /usr/bin/gcc /usr/bin/gcc
 COPY --from=gcc /tmp /tmp
+# override default shell option
+SHELL ["/bin/sh", "-eo", "pipefail", "-c"]
 # update system, install needed dependencies and store library path
-RUN apk update \
-    && apk upgrade \
-    && apk add binutils \
+RUN apk --no-cache add binutils \
         # light weight glibc compatibility layer that creates symlinks for libc, libpthread, etc
         libc6-compat \
         # GNU make utility
@@ -90,9 +90,10 @@ ARG FPC_VERSION
 # docker buildx variables
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
+# override default shell option
+SHELL ["/bin/sh", "-euxo", "pipefail", "-c"]
 # download and extract installer, install and remove temporary files
-RUN set -eux \
-    && echo "Trying to build FPC minimal image for ${TARGETPLATFORM} on ${BUILDPLATFORM}." \
+RUN echo "Trying to build FPC minimal image for ${TARGETPLATFORM} on ${BUILDPLATFORM}." \
     && cd /tmp \
     # download
     && sh dl.sh \
@@ -123,9 +124,10 @@ ARG FPC_VERSION
 # docker buildx variables
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
+# override default shell option
+SHELL ["/bin/sh", "-euxo", "pipefail", "-c"]
 # download and extract installer, install and remove temporary files
-RUN set -eux \
-    && echo "Trying to build FPC slim image for ${TARGETPLATFORM} on ${BUILDPLATFORM}." \
+RUN echo "Trying to build FPC slim image for ${TARGETPLATFORM} on ${BUILDPLATFORM}." \
     && cd /tmp \
     # download
     && sh dl.sh \
@@ -162,9 +164,10 @@ ARG DO_FULL_INSTALLATION
 # docker buildx variables
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
+# override default shell option
+SHELL ["/bin/sh", "-euxo", "pipefail", "-c"]
 # download and extract installer, install and remove temporary files
-RUN set -eux \
-    && echo "Trying to build FPC full image for ${TARGETPLATFORM} on ${BUILDPLATFORM}." \
+RUN echo "Trying to build FPC full image for ${TARGETPLATFORM} on ${BUILDPLATFORM}." \
     && cd /tmp \
     # download
     && sh dl.sh \

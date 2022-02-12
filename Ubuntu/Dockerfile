@@ -57,6 +57,8 @@ RUN set -eux \
     && apt-get update \
     && apt-get install -y build-essential \
         wget \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
     && echo "Trying to build FPC minimal image for ${TARGETPLATFORM} on ${BUILDPLATFORM}." \
     && cd /tmp \
     # download
