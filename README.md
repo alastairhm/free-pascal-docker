@@ -5,6 +5,10 @@
 
 
 # Supported tags and respective Dockerfile links
+- [`3.2.2-focal-full`, `latest-focal-full`](https://gitlab.com/freepascal.org/fpc/docker/-/blob/3.2.2/Ubuntu/Dockerfile)
+- [`3.2.2-full`, `latest-full`](https://gitlab.com/freepascal.org/fpc/docker/-/blob/3.2.2/AlpineLinux/Dockerfile)
+- [`3.2.2-slim`, `latest-slim`](https://gitlab.com/freepascal.org/fpc/docker/-/blob/3.2.2/AlpineLinux/Dockerfile)
+- [`3.2.2-minimal`, `latest-minimal`](https://gitlab.com/freepascal.org/fpc/docker/-/blob/3.2.2/AlpineLinux/Dockerfile)
 - [`3.2.0-focal-full`](https://gitlab.com/freepascal.org/fpc/docker/-/blob/3.2.0/Ubuntu/Dockerfile)
 - [`3.2.0-full`](https://gitlab.com/freepascal.org/fpc/docker/-/blob/3.2.0/AlpineLinux/Dockerfile)
 - [`3.2.0-slim`](https://gitlab.com/freepascal.org/fpc/docker/-/blob/3.2.0/AlpineLinux/Dockerfile)
@@ -44,7 +48,7 @@ Free Pascal is a mature, versatile, open source Pascal compiler. It can target m
 ## Start a FPC instance running your app
 The most straightforward way to use this image is to use a container as both the build and runtime environment. In your Dockerfile, writing something along the lines of the following will compile and run your project:
 ```docker
-FROM freepascal/fpc:3.2.0-focal-full
+FROM freepascal/fpc:3.2.2-focal-full
 
 WORKDIR /usr/src/myapp
 COPY . .
@@ -60,7 +64,7 @@ $ docker run -it --rm --name my-running-app my-fpc-app
 ```
 This creates an image that has all of the FPC tooling in the image. If you just want the compiled application:
 ```docker
-FROM freepascal/fpc:3.2.0-focal-full as builder
+FROM freepascal/fpc:3.2.2-focal-full as builder
 WORKDIR /usr/src/myapp
 COPY . .
 RUN fpc myapp.pas
@@ -76,7 +80,7 @@ See [multi-stage builds](https://docs.docker.com/develop/develop-images/multista
 ## Compile your app inside the Docker container
 There may be occasions where it is not appropriate to run your app inside a container. To compile, but not run your app inside the Docker instance, you can write something like:
 ```console
-$ docker run --rm --user "$(id -u)":"$(id -g)" -v "$PWD":/usr/src/myapp -w /usr/src/myapp freepascal/fpc:3.2.0-focal-full fpc -MDelphi myapp.lpr
+$ docker run --rm --user "$(id -u)":"$(id -g)" -v "$PWD":/usr/src/myapp -w /usr/src/myapp freepascal/fpc:3.2.2-focal-full fpc -MDelphi myapp.lpr
 ```
 This will add your current directory, as a volume, to the container, set the working directory to the volume, and run the command `fpc -MDelphi myapp.lpr`. This tells FPC to compile the project `myapp` to output an executable.
 
@@ -87,7 +91,7 @@ The `FPC` images come in different flavors, each designed for a specific use cas
 
 ## Ubuntu
 [Ubuntu](https://hub.docker.com/_/ubuntu) is a Debian-based Linux operating system that runs from the desktop to the cloud. It is the world's most popular operating system across public clouds and OpenStack clouds. It is the number one platform for containers; from Docker to Kubernetes to LXD, Ubuntu can run your containers at scale. Fast, secure and simple, Ubuntu powers millions of PCs worldwide.
-### `<version>`-focal-full
+### `<version>`-`<ubuntu>`-full
 This image contains everything you would find in a full local installation and thus also the documentation and examples.
 
 ## Alpine Linux
