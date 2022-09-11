@@ -5,7 +5,7 @@
 # set Ubuntu release version (latest, focal, bionic, ...)
 ARG UBUNTU_VERSION=focal
 # set FPC version (format: d.d.d)
-ARG FPC_VERSION=3.2.0
+ARG FPC_VERSION=3.2.2
 
 
 ##
@@ -30,12 +30,7 @@ RUN echo "#!/bin/sh" >> dl.sh \
     && echo "echo "Downloading FPC \${FPC_ARCHITECTURE} for \${TARGETPLATFORM} target."" >> dl.sh \
     && echo "# SourceForge is probably the worst download source you can imagine..." >> dl.sh \
     && echo "# wget --output-document="fpc-archive.tar" "https://downloads.sourceforge.net/project/freepascal/Linux/\${FPC_VERSION}/fpc-\${FPC_VERSION}.\${FPC_ARCHITECTURE}.tar"" >> dl.sh \
-    && echo "# Packages do not follow the same naming scheme..." >> dl.sh \
-    && echo "if [ "\${FPC_ARCHITECTURE}" = "x86_64-linux" ]; then" >> dl.sh \
-    && echo " wget --output-document="fpc-archive.tar" "https://mirror.freemirror.org/pub/fpc/dist/\${FPC_VERSION}/\${FPC_ARCHITECTURE}/fpc-\${FPC_VERSION}-\${FPC_ARCHITECTURE}.tar"" >> dl.sh \
-    && echo "else" >> dl.sh \
-    && echo " wget --output-document="fpc-archive.tar" "https://mirror.freemirror.org/pub/fpc/dist/\${FPC_VERSION}/\${FPC_ARCHITECTURE}/fpc-\${FPC_VERSION}.\${FPC_ARCHITECTURE}.tar"" >> dl.sh \
-    && echo "fi" >> dl.sh
+    && echo "wget --output-document="fpc-archive.tar" "https://mirror.freemirror.org/pub/fpc/dist/\${FPC_VERSION}/\${FPC_ARCHITECTURE}/fpc-\${FPC_VERSION}.\${FPC_ARCHITECTURE}.tar"" >> dl.sh
 
 
 ##
@@ -57,6 +52,8 @@ RUN set -eux \
     && apt-get update \
     && apt-get install -y build-essential \
         wget \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
     && echo "Trying to build FPC minimal image for ${TARGETPLATFORM} on ${BUILDPLATFORM}." \
     && cd /tmp \
     # download
