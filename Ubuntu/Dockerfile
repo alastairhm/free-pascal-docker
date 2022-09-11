@@ -3,7 +3,7 @@
 ## Configuration
 ##
 # set Ubuntu release version (latest, focal, bionic, ...)
-ARG UBUNTU_VERSION=focal
+ARG UBUNTU_VERSION=jammy
 # set FPC version (format: d.d.d)
 ARG FPC_VERSION=3.2.2
 
